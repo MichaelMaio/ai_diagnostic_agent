@@ -1,0 +1,19 @@
+{
+    "name": "rag-pipeline",
+    "version": "1.0.0",
+    "description": "Local RAG pipeline for diagnostic agent",
+    "main": "rag-pipeline.ts",
+    "scripts": {
+        "start": "ts-node rag-pipeline.ts"
+    },
+    "dependencies": {
+        "axios": "^1.11.0",
+        "dotenv": "^17.2.1",
+        "ts-morph": "^26.0.0",
+        "@qdrant/qdrant-js": "^1.15.1"
+    },
+    "devDependencies": {
+        "typescript": "^5.3.3",
+        "ts-node": "^10.9.2"
+    }
+}
