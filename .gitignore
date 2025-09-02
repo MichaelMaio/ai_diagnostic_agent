@@ -1,0 +1,28 @@
+# Virtual environments
+.venv/
+venv/
+
+# Environment variables
+.env
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# VS Code settings
+.vscode/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# Vite build output
+dist/

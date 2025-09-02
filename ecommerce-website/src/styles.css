@@ -1,0 +1,94 @@
+/* ProductList sytles */
+
+table[data-testid="product-table"] {
+  width: auto;
+  margin: 0;
+  border-collapse: collapse;
+  font-family: sans-serif;
+  font-size: 14px;
+}
+
+thead th {
+  padding: 6px 12px;
+  text-align: left;
+  background-color: #f8f8f8;
+  border-bottom: 1px solid #ccc;
+}
+
+tbody td {
+  padding: 6px 12px;
+  vertical-align: middle;
+  border-bottom: 1px solid #eee;
+  white-space: nowrap;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+td[data-testid="product-name"] {
+  display: flex;
+  align-items: center;
+}
+
+td[data-testid="product-name"] img {
+  width: 40px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  table[data-testid="product-table"] {
+    font-size: 12px;
+  }
+
+  td[data-testid="product-name"] img {
+    width: 30px;
+    margin-right: 6px;
+  }
+
+  thead th,
+  tbody td {
+    padding: 4px 8px;
+  }
+}
+
+/* MoneySlot styles */
+
+.vending-machine {
+  padding: 20px;
+  font-family: sans-serif;
+}
+
+.money-slot {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.quarter-image {
+  width: 50px;
+  margin-right: 12px;
+  cursor: pointer;
+}
+
+.money-display {
+  font-size: 18px;
+  font-weight: bold;
+  border: 1px solid #ccc;
+  padding: 6px 12px;
+  border-radius: 4px;
+  min-width: 100px;
+  text-align: center;
+  background-color: #f0f0f0;
+}
+
+.clickable-product {
+  cursor: pointer;
+}
+
+.clickable-product img {
+  width: 40px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
