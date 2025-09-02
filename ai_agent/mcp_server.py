@@ -1,16 +1,19 @@
-from flask import Flask, request, jsonify
 import inspect
 
+from flask import Flask, request, jsonify
+
+# For a production environment, use a more robust server like FastAPI. But Flask is sufficient for this demo.
 app = Flask(__name__)
+
 
 # -------------------------------
 # Tool Implementations
 # -------------------------------
 
-
 def get_test_failure() -> str:
 
-    # Simulated test failure output. In a production environment, this method would dynamically get the failure for a specified test.
+    # Static test failure output just for demo purposes.
+    # In a production environment, this method would dynamically get the failure for a specified test.
     return """
         1) [chromium] › tests/vending-machine.spec.ts:33:5 › insert money ────────────────────────────────
 
@@ -28,23 +31,16 @@ def get_test_failure() -> str:
 
 
 def get_test_code() -> str:
-    # Returns the code of the failing test. In a production environment, this method would use RAG
-    # to return just the relevant test code and not necessarily an entire test file.
+    # This is OK for a demo but in a production environment, 
+    # this method would use RAG to return just the relevant test code and not necessarily an entire test file.
     return open("../ecommerce-website/tests/vending-machine.spec.ts").read().strip()
 
 
 def get_app_code() -> str:
-    # Returns the application code. In a production environment, this method would use RAG
-    # to return just the relevant app code and not necessarily an entire app file.
+    # This is OK for a demo but in a production environment, 
+    # this method would use RAG to return just the relevant app code and not necessarily an entire app file.
     return open("../ecommerce-website/src/App.tsx").read().strip()
 
-
-# -------------------------------
-# JSON-RPC Endpoint
-# -------------------------------
-
-
-import inspect
 
 def invoke_tool(tool_func, params):
 
@@ -74,6 +70,10 @@ def invoke_tool(tool_func, params):
     raise ValueError(f"Cannot map input {input_data} to function {tool_func.__name__}")
 
 
+# -------------------------------
+# JSON-RPC Endpoint
+# -------------------------------
+
 @app.route("/mcp", methods=["POST"])
 def mcp_endpoint():
 
@@ -89,6 +89,7 @@ def mcp_endpoint():
             "GetAppCode": get_app_code
         }
 
+        # Validate the method exists in the list of tools.
         if method not in tools:
             return jsonify({
                 "jsonrpc": "2.0",
@@ -101,12 +102,14 @@ def mcp_endpoint():
         tool_func = tools[method]
         result = invoke_tool(tool_func, params)
 
+        # Return the result in JSON-RPC format.
         return jsonify({
             "jsonrpc": "2.0",
             "id": data.get("id"),
             "result": result
         })
 
+    # Catch any unexpected errors.
     except Exception as e:
         return jsonify({
             "jsonrpc": "2.0",

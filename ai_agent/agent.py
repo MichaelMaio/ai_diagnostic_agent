@@ -1,16 +1,18 @@
-from groq import Groq
 import os
 import re
 import requests
+
+from groq import Groq
 from typing import Any, Dict, List, Optional
 
 
 # ReAct-based agent — keeps conversation history and calls the model hosted on Groq.
 class ReActAgent:
 
+    # Initialize the agent.
     def __init__(self) -> None:   
         
-        # Initialize the Groq client.
+        # Initialize the Groq client (the assistant).
         self.groq_client: Groq = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
         # Load the system prompt from a file.
@@ -19,9 +21,10 @@ class ReActAgent:
         # Conversation history (system + user + assistant messages).
         self.messages: List[Dict[str, str]] = [{"role": "system", "content": system_prompt}]
 
+    # Executes one step of the agent loop and returns the assistant's response.
     def step(self, user_input: Optional[str] = None) -> str:
 
-        # Executes one step of the agent loop and returns the assistant's response.
+        # Add user input to the conversation history.
         if user_input and user_input.strip():
             self.messages.append({"role": "user", "content": user_input})
 
@@ -46,8 +49,9 @@ def do_action(result: str) -> str:
     match = re.search(r"Action:\s*([a-zA-Z0-9_]+)(?::\s*(.+))?", result)
 
     if not match:
-        return None, None
+        return None
 
+    # Extract the tool name and arguments.
     tool = match.group(1).strip()
     raw_args = match.group(2)
 
@@ -58,6 +62,7 @@ def do_action(result: str) -> str:
         args = []
 
     try:
+
         # Prepare the MCP server JSON-RPC payload.
         payload: Dict[str, Any] = {
             "jsonrpc": "2.0",
@@ -82,6 +87,7 @@ def do_action(result: str) -> str:
     except Exception as e:
         observation = f"Error calling MCP server: {e}"
 
+    # Format the observation for the next prompt.
     next_prompt: str = f"Observation:\n{observation}"
     print(next_prompt)
     return next_prompt
@@ -93,7 +99,7 @@ def run_agent() -> None:
     # Initialize services.
     agent = ReActAgent()
 
-    next_prompt: str = "Question: My test failed when run against my app. What is the fix for the failure?" 
+    next_prompt: str = "My test failed when run against my app. What is the fix for the failure?" 
     max_iterations: int = 10
 
     # Run the agent loop.
@@ -102,7 +108,7 @@ def run_agent() -> None:
         print(result)
 
         # Check for Action or Answer in the result.
-        if "PAUSE" in result and "Action" in result:
+        if "PAUSE" in result and "Action: " in result:
             next_prompt = do_action(result)
             continue
 
