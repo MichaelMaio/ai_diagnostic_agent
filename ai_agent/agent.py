@@ -3,8 +3,10 @@ import re
 import requests
 
 from groq import Groq
+from qdrant_client import QdrantClient
+from qdrant_client.models import Filter, PointStruct, SearchRequest
+from sentence_transformers import SentenceTransformer
 from typing import Any, Dict, List, Optional
-
 
 # ReAct-based agent — keeps conversation history and calls the model hosted on Groq.
 class ReActAgent:
@@ -93,6 +95,24 @@ def do_action(result: str) -> str:
     return next_prompt
 
 
+def do_rag() -> str:
+
+    model = SentenceTransformer("BAAI/bge-large-en")
+    query = "Which component handles onInsertQuarter?"
+    embedding = model.encode([query], normalize_embeddings=True)[0]
+
+    client = QdrantClient(host="localhost", port=6333)
+
+    results = client.search(
+        collection_name="code_chunks",
+        query_vector=embedding,
+        limit=5
+    )
+
+    for hit in results:
+        print(f"Match: {hit.payload['name']} ({hit.payload['filePath']})")
+
+
 # Main agent loop — runs up to max_iterations.
 def run_agent() -> None:
 
@@ -119,4 +139,5 @@ def run_agent() -> None:
 
 
 if __name__ == "__main__":
+    do_rag()
     run_agent()
