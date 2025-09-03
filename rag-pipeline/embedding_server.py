@@ -1,3 +1,5 @@
+# docker run -d --name qdrant-local -p 6333:6333 -p 6334:6334 qdrant/qdrant
+
 from fastapi import FastAPI, Request
 from sentence_transformers import SentenceTransformer
 import uvicorn
