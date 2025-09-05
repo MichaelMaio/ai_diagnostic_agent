@@ -1,4 +1,10 @@
+// start embedding server first (see embedding_server.py)
+// cd rag-pipeline
+// npm install
 // npx tsx rag-pipeline.ts
+
+// This RAG pipeline is written in TypeScript in order to use ts-morph to chunk the TypeScript codebase
+// being indexed for automatic test failure diagnosis and app fix suggestion.
 
 import { Project, CallExpression, SyntaxKind, Node, JsxAttribute, SourceFile, ExportAssignment, FunctionDeclaration, VariableDeclaration } from "ts-morph";
 
@@ -120,7 +126,9 @@ function extractChunks(): CodeChunk[] {
                 Node.isJsxElement(d) || Node.isJsxSelfClosingElement(d)
             );
 
-            const type = containsJSX ? "component" : "function";
+            const type = filePath.includes(".spec.ts") ? "test" :
+                        containsJSX ? "component" : "function";
+
             const props = Node.isFunctionLikeDeclaration(node)
                 ? node.getParameters()[0]?.getType().getProperties().map(p => p.getName()) || []
                 : [];
@@ -165,6 +173,35 @@ function extractChunks(): CodeChunk[] {
                 if (tests) tests.forEach(t => reverseTests.add(t));
             });
 
+            // New enrichment: prop usage in JSX text
+            const usesProp: string[] = [];
+            const propToSelector: Record<string, string[]> = {};
+
+            const jsxTextNodes = node.getDescendantsOfKind(SyntaxKind.JsxText);
+            jsxTextNodes.forEach(textNode => {
+                const text = textNode.getText();
+                props.forEach(prop => {
+                    if (text.includes(prop)) {
+                        usesProp.push(prop);
+                        selectors.forEach(sel => {
+                            if (!propToSelector[prop]) propToSelector[prop] = [];
+                            propToSelector[prop].push(sel);
+                        });
+                    }
+                });
+            });
+
+            // New enrichment: state mutation detection
+            const updatesState: string[] = [];
+            const callExprs = node.getDescendantsOfKind(SyntaxKind.CallExpression);
+            callExprs.forEach(call => {
+                const exprText = call.getExpression().getText();
+                if (exprText.startsWith("set")) {
+                    const stateName = exprText.replace(/^set/, "").replace(/^\w/, c => c.toLowerCase());
+                    updatesState.push(stateName);
+                }
+            });
+
             chunks.push({
                 id: `${filePath}::${name}`,
                 filePath,
@@ -177,7 +214,10 @@ function extractChunks(): CodeChunk[] {
                 linkedHandlers,
                 reverseSelectors,
                 linkedTests: Array.from(linkedTests),
-                reverseTests: Array.from(reverseTests)
+                reverseTests: Array.from(reverseTests),
+                usesProp,
+                updatesState,
+                propToSelector
             });
         }
     }
@@ -192,6 +232,18 @@ function extractFunctionLikeNodes(sourceFile: SourceFile): { node: Node; name: s
   const functions: FunctionDeclaration[] = sourceFile.getFunctions();
   for (const fn of functions) {
     results.push({ node: fn, name: fn.getName() || "anonymous" });
+
+    // NEW: Sub-chunk each statement inside the function body
+    const body = fn.getBody();
+    if (body && Node.isBlock(body)) {
+        const bodyStatements = body.getStatements();
+        for (const stmt of bodyStatements) {
+            results.push({
+                node: stmt,
+                name: `${fn.getName() || "anonymous"}::${stmt.getKindName()}`
+            });
+        }
+    }
   }
 
   // Arrow functions assigned to variables
