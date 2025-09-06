@@ -22,7 +22,7 @@ class ReActAgent:
         self.groq_client: Groq = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
         # Load the system prompt from a file.
-        system_prompt: str = open("ai_agent/system_prompt.txt").read().strip()
+        system_prompt: str = open("system_prompt.txt").read().strip()
 
         # Conversation history (system + user + assistant messages).
         self.messages: List[Dict[str, str]] = [{"role": "system", "content": system_prompt}]
@@ -51,8 +51,8 @@ class ReActAgent:
 # Executes a tool call by sending it to the MCP server.
 def do_action(result: str) -> str:
 
-    # Match: Action: FunctionName[: optional arguments]
-    match = re.search(r"Action:\s*([a-zA-Z0-9_]+)(?::\s*(.+))?", result)
+    # Match: ACTION: FunctionName[: optional arguments]
+    match = re.search(r"ACTION:\s*([a-zA-Z0-9_]+)(?::\s*([^\r\n]+))?", result)
 
     if not match:
         return None
@@ -94,7 +94,7 @@ def do_action(result: str) -> str:
         observation = f"Error calling MCP server: {e}"
 
     # Format the observation for the next prompt.
-    next_prompt: str = f"Observation:\n{observation}"
+    next_prompt: str = f"\nOBSERVATION:\n\n{observation}"
     print(next_prompt)
     return next_prompt
 
@@ -111,14 +111,14 @@ def run_agent(user_prompt) -> None:
     for _ in range(max_iterations):
 
         result: str = agent.step(next_prompt)
-        print(result)
+        print("\n" + result)
 
-        # Check for Action or Answer in the result.
-        if "PAUSE" in result and "Action: " in result:
+        # Check for ACTION or ANSWER in the result.
+        if "PAUSE" in result and "ACTION: " in result:
             next_prompt = do_action(result)
             continue
 
-        answer_prefix: str = "Answer: "
+        answer_prefix: str = "ANSWER: "
 
         if answer_prefix in result:
             break

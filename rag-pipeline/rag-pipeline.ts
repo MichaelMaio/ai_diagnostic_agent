@@ -22,7 +22,7 @@ type CodeChunk = {
     id: string;
     filePath: string;
     name: string;
-    type: "component" | "function";
+    type: "component" | "function" | "test";
     code: string;
     props?: string[];
     selectors?: string[];
@@ -31,6 +31,9 @@ type CodeChunk = {
     reverseSelectors?: string[];
     linkedTests?: string[];
     reverseTests?: string[];
+    usesProp?: string[];
+    updatesState?: string[];
+    propToSelector: Record<string, string[]>
     embedding?: number[];
 };
 
@@ -337,7 +340,10 @@ async function indexChunksInQdrant(chunks: CodeChunk[]) {
             linkedHandlers: chunk.linkedHandlers,
             reverseSelectors: chunk.reverseSelectors,
             linkedTests: chunk.linkedTests,
-            reverseTests: chunk.reverseTests
+            reverseTests: chunk.reverseTests,
+            usesProp: chunk.usesProp,
+            updatesState: chunk.updatesState,
+            propToSelector: chunk.propToSelector
         }
     }));
 
