@@ -1,4 +1,14 @@
+# cd rag-pipeline
+# python -m venv venv
+# .\venv\Scripts\activate
+# pip install -r requirements.txt
+# run Docker Desktop
 # docker run -d --name qdrant-local -p 6333:6333 -p 6334:6334 qdrant/qdrant
+# python embedding_server.py
+
+# This embedding server is being used because Python has better support for SentenceTransformers than TypeScript.
+# However, the main RAG pipeline (rag-pipeline.ts) is in TypeScript to facilitate code analysis using ts-morph
+# because the app and test code being analyzed is in TypeScript/JavaScript.
 
 from fastapi import FastAPI, Request
 from sentence_transformers import SentenceTransformer

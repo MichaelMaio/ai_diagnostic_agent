@@ -1,11 +1,15 @@
+# start MPC server first (see mcp_server.py)
+# cd ai_agent
+# python -m venv venv
+# .\venv\Scripts\activate
+# pip install -r requirements.txt
+# python agent.py
+
 import os
 import re
 import requests
 
 from groq import Groq
-from qdrant_client import QdrantClient
-from qdrant_client.models import Filter, PointStruct, SearchRequest
-from sentence_transformers import SentenceTransformer
 from typing import Any, Dict, List, Optional
 
 # ReAct-based agent — keeps conversation history and calls the model hosted on Groq.
@@ -18,7 +22,7 @@ class ReActAgent:
         self.groq_client: Groq = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
         # Load the system prompt from a file.
-        system_prompt: str = open("ai_agent/system_prompt.txt").read().strip()
+        system_prompt: str = open("system_prompt.txt").read().strip()
 
         # Conversation history (system + user + assistant messages).
         self.messages: List[Dict[str, str]] = [{"role": "system", "content": system_prompt}]
@@ -47,8 +51,8 @@ class ReActAgent:
 # Executes a tool call by sending it to the MCP server.
 def do_action(result: str) -> str:
 
-    # Match: Action: FunctionName[: optional arguments]
-    match = re.search(r"Action:\s*([a-zA-Z0-9_]+)(?::\s*(.+))?", result)
+    # Match: ACTION: FunctionName[: optional arguments]
+    match = re.search(r"ACTION:\s*([a-zA-Z0-9_]+)(?::\s*([^\r\n]+))?", result)
 
     if not match:
         return None
@@ -90,54 +94,53 @@ def do_action(result: str) -> str:
         observation = f"Error calling MCP server: {e}"
 
     # Format the observation for the next prompt.
-    next_prompt: str = f"Observation:\n{observation}"
+    next_prompt: str = f"\nOBSERVATION:\n\n{observation}"
     print(next_prompt)
     return next_prompt
 
-
-def do_rag() -> str:
-
-    model = SentenceTransformer("BAAI/bge-large-en")
-    query = "Which component handles onInsertQuarter?"
-    embedding = model.encode([query], normalize_embeddings=True)[0]
-
-    client = QdrantClient(host="localhost", port=6333)
-
-    results = client.search(
-        collection_name="code_chunks",
-        query_vector=embedding,
-        limit=5
-    )
-
-    for hit in results:
-        print(f"Match: {hit.payload['name']} ({hit.payload['filePath']})")
-
-
 # Main agent loop — runs up to max_iterations.
-def run_agent() -> None:
+def run_agent(user_prompt) -> None:
 
     # Initialize services.
     agent = ReActAgent()
 
-    next_prompt: str = "My test failed when run against my app. What is the fix for the failure?" 
+    next_prompt = user_prompt
     max_iterations: int = 10
 
     # Run the agent loop.
     for _ in range(max_iterations):
-        result: str = agent.step(next_prompt)
-        print(result)
 
-        # Check for Action or Answer in the result.
-        if "PAUSE" in result and "Action: " in result:
+        result: str = agent.step(next_prompt)
+        print("\n" + result)
+
+        # Check for ACTION or ANSWER in the result.
+        if "PAUSE" in result and "ACTION: " in result:
             next_prompt = do_action(result)
             continue
 
-        answer_prefix: str = "Answer: "
+        answer_prefix: str = "ANSWER: "
 
         if answer_prefix in result:
             break
 
 
 if __name__ == "__main__":
-    do_rag()
-    run_agent()
+
+    user_prompt: str = """
+        My Playwright test failed when run against my React app. What is the fix for this failure?"
+
+        1) [chromium] › tests/vending-machine.spec.ts:33:5 › insert money ────────────────────────────────
+
+        Error: Timed out 5000ms waiting for expect(locator).toContainText(expected)
+
+        Locator: getByTestId('money-display')
+        Expected string: "$0.25"
+        Received string: "$-0.25"
+        Call log:
+            - Expect "toContainText" with timeout 5000ms
+            - waiting for getByTestId('money-display')
+            9 × locator resolved to <div class="money-display" data-testid="money-display">$-0.25</div>
+                - unexpected value "$-0.25"
+    """
+
+    run_agent(user_prompt)

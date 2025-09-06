@@ -1,6 +1,18 @@
+# cd ai_agent
+# python -m venv venv
+# .\venv\Scripts\activate
+# pip install -r requirements.txt
+# python mcp_server.py
+
+import os
+
 import inspect
 
 from flask import Flask, request, jsonify
+
+from qdrant_client import QdrantClient
+from qdrant_client.models import Filter, PointStruct, SearchRequest
+from sentence_transformers import SentenceTransformer
 
 # For a production environment, use a more robust server like FastAPI. But Flask is sufficient for this demo.
 app = Flask(__name__)
@@ -10,37 +22,45 @@ app = Flask(__name__)
 # Tool Implementations
 # -------------------------------
 
-def get_test_failure() -> str:
 
-    # Static test failure output just for demo purposes.
-    # In a production environment, this method would dynamically get the failure for a specified test.
-    return """
-        1) [chromium] › tests/vending-machine.spec.ts:33:5 › insert money ────────────────────────────────
+def get_relevant_code(query) -> str:
 
-        Error: Timed out 5000ms waiting for expect(locator).toContainText(expected)
+    model = SentenceTransformer("BAAI/bge-large-en")
+    embedding = model.encode([query], normalize_embeddings=True)[0]
 
-        Locator: getByTestId('money-display')
-        Expected string: "$0.25"
-        Received string: "$-0.25"
-        Call log:
-            - Expect "toContainText" with timeout 5000ms
-            - waiting for getByTestId('money-display')
-            9 × locator resolved to <div class="money-display" data-testid="money-display">$-0.25</div>
-                - unexpected value "$-0.25"
-    """
+    client = QdrantClient(host="localhost", port=6333)
 
+    results = client.search(
+        collection_name="code_chunks",
+        query_vector=embedding,
+        limit=5
+    )
 
-def get_test_code() -> str:
-    # This is OK for a demo but in a production environment, 
-    # this method would use RAG to return just the relevant test code and not necessarily an entire test file.
-    return open("../ecommerce-website/tests/vending-machine.spec.ts").read().strip()
+    return "\n".join([f"{hit.payload['name']} ({hit.payload['filePath']})" for hit in results])
 
+def get_code_file_contents(filename) -> str:
 
-def get_app_code() -> str:
-    # This is OK for a demo but in a production environment, 
-    # this method would use RAG to return just the relevant app code and not necessarily an entire app file.
-    return open("../ecommerce-website/src/App.tsx").read().strip()
+    search_root = os.path.abspath("../ecommerce-website")
 
+    for root, dirs, files in os.walk(search_root):
+        if filename in files:
+            full_path = os.path.join(root, filename)
+            print(f"Found: {full_path}")
+
+    return open(full_path).read().strip()
+
+def get_list_of_code_files() -> list[str]:
+
+    root_path = os.path.abspath("../ecommerce-website")
+    valid_exts = {".tsx", ".ts", ".html", ".css"}
+    matching_files = []
+
+    for dirpath, dirs, filenames in os.walk(root_path):
+        for filename in filenames:
+            if os.path.splitext(filename)[1] in valid_exts:
+                matching_files.append(filename)
+
+    return matching_files
 
 def invoke_tool(tool_func, params):
 
@@ -84,9 +104,9 @@ def mcp_endpoint():
 
         # Map method names to tool functions.
         tools = {
-            "GetTestFailure": get_test_failure,
-            "GetTestCode": get_test_code,
-            "GetAppCode": get_app_code
+            "GetRelevantCode": get_relevant_code,
+            "GetCodeFileContents": get_code_file_contents,
+            "GetListOfCodeFiles": get_list_of_code_files
         }
 
         # Validate the method exists in the list of tools.
