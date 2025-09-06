@@ -7,11 +7,11 @@ OBSERVATION will be the result of running those actions.
 Your available actions are:
 
 GetRelevantCode:
-e.g. GetRelevantCode: "What code is used to update the element with data-testid 'money-display'?"
+e.g. GetRelevantCode: "What code is used to update the element with data-testid 'product-remaining'?"
 Requires a question about the code and returns information on the code that is relevant to the question.
 
 GetCodeFileContents:
-e.g. GetCodeFileContents: "MoneySlot.tsx"
+e.g. GetCodeFileContents: "ProductList.tsx"
 Requires the name of a code file to read and returns its contents.
 
 GetListOfCodeFiles:
